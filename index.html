@@ -53,7 +53,7 @@
   [hidden] { display: none !important; }
   svg { display: block; fill: currentColor; }
 
-  /* Cadre général : plein écran sur téléphone, fenêtre centrée sur PC */
+  /* Cadre général */
   .app {
     height: 100vh; height: 100dvh;
     display: flex; flex-direction: column;
@@ -102,10 +102,9 @@
   .head-text { flex: 1; min-width: 0; }
   .head-text strong { display: block; font-size: 1.05rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .head-text span { display: block; font-size: .8rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .icon-btn { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
   .icon-btn:hover { background: #ffffff22; }
   .icon-btn svg { width: 22px; height: 22px; }
-  .icon-btn.danger { background: #e5484d; }
 
   #messages {
     flex: 1; overflow-y: auto; padding: 14px 6% 8px; display: flex; flex-direction: column;
@@ -161,8 +160,31 @@
   .send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--send); color: #fff; display: grid; place-items: center; flex: none; }
   .send-btn svg { width: 22px; height: 22px; }
 
-  #toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #111b21; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 20; max-width: 90%; text-align: center; }
-  #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: grid; place-items: center; padding: 16px; z-index: 30; }
+  /* ---------- ÉCRAN D'APPEL ---------- */
+  #call-screen {
+    position: absolute; inset: 0; z-index: 50; background: #0b141a; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 40px 20px 60px; text-align: center;
+  }
+  .call-info { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 40px; }
+  .call-avatar {
+    width: 110px; height: 110px; border-radius: 50%; background: #202c33;
+    display: grid; place-items: center; color: #8696a0; box-shadow: 0 0 30px rgba(0,168,132,.2);
+  }
+  .call-avatar svg { width: 64px; height: 64px; }
+  .call-status { font-size: 1rem; color: #00a884; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+  .call-actions { display: flex; gap: 24px; }
+  .call-btn-action {
+    width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  }
+  .call-btn-action.hangup { background: #e5484d; }
+  .call-btn-action.hangup svg { width: 30px; height: 30px; }
+  .call-btn-action.mute { background: #202c33; color: #e9edef; }
+  .call-btn-action.mute svg { width: 26px; height: 26px; }
+
+  #toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #111b21; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 60; max-width: 90%; text-align: center; }
+  #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: grid; place-items: center; padding: 16px; z-index: 70; }
   #lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
 </style>
 </head>
@@ -189,11 +211,8 @@
     <div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13zm8 0c-.3 0-.6 0-.9.1a4.2 4.2 0 0 1 1.9 3.4V19h6v-2.5c0-2.3-4.700-3.500-7-3.500z"/></svg></div>
     <div class="head-text"><strong id="chat-title">Chat de classe</strong><span id="whoami"></span></div>
     
-    <!-- Boutons d'appel vocal WebRTC -->
-    <button class="icon-btn" id="call-start-btn" type="button" title="Démarrer un appel vocal"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.200-2.200a1 1 0 0 1 1-.25 11.400 11.400 0 0 0 3.600.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.500a1 1 0 0 1 1 1c0 1.300.2 2.500.57 3.600a1 1 0 0 1-.25 1z"/></svg></button>
-    <button class="icon-btn" id="call-join-btn" type="button" title="Rejoindre l'appel" style="color: #25d366;"><svg viewBox="0 0 24 24"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.05 15.05 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg></button>
-    <button class="icon-btn danger" id="call-hangup-btn" type="button" title="Raccrocher" hidden><svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C4.37 7.61 8.01 6 12 6c3.99 0 7.63 1.61 11.71 5.67.39.39.39 1.02 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 1-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
-
+    <!-- Bouton d'appel unique -->
+    <button class="icon-btn" id="call-btn" type="button" title="Lancer / Rejoindre l'appel vocal"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.200-2.200a1 1 0 0 1 1-.25 11.400 11.400 0 0 0 3.600.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.500a1 1 0 0 1 1 1c0 1.300.2 2.500.57 3.600a1 1 0 0 1-.25 1z"/></svg></button>
     <button class="icon-btn" id="rename-btn" type="button" aria-label="Changer de nom"><svg viewBox="0 0 24 24"><path d="M3 17.250V21h3.750L17.810 9.940l-3.750-3.750zM20.710 7.040a1 1 0 0 0 0-1.410l-2.340-2.340a1 1 0 0 0-1.410 0l-1.830 1.830 3.750 3.750z"/></svg></button>
   </header>
 
@@ -205,6 +224,19 @@
     <input type="text" id="text" placeholder="Écris un message" maxlength="1000" aria-label="Message">
     <button class="send-btn" type="submit" aria-label="Envoyer"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>
   </form>
+
+  <!-- Écran d'appel plein écran -->
+  <div id="call-screen" hidden>
+    <div class="call-info">
+      <div class="call-avatar"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
+      <h2 style="margin: 8px 0 0; font-size: 1.4rem;">Appel vocal de classe</h2>
+      <div class="call-status" id="call-status-label">Connexion en cours...</div>
+    </div>
+    <div class="call-actions">
+      <button class="call-btn-action mute" id="mute-btn" title="Couper le micro"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg></button>
+      <button class="call-btn-action hangup" id="hangup-btn" title="Raccrocher"><svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C4.37 7.61 8.01 6 12 6c3.99 0 7.63 1.61 11.71 5.67.39.39.39 1.02 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 1-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
+    </div>
+  </div>
 </div>
 
 <audio id="remote-audio" autoplay></audio>
@@ -291,7 +323,7 @@ $("rename-btn").onclick = () => {
   if (n) { myName = n; store.set("chat_name", n); $("whoami").textContent = "Toi : " + n; }
 };
 
-/* ---------- Connexion invisible (aucun compte à créer) ---------- */
+/* ---------- Connexion invisible ---------- */
 onAuthStateChanged(auth, (user) => { currentUser = user; refresh(); });
 
 let signingIn = false;
@@ -303,7 +335,7 @@ function refresh() {
     signingIn = true;
     signInAnonymously(auth).catch((err) => {
       showJoin(err.code === "auth/operation-not-allowed"
-        ? "Active la connexion « Anonyme » dans Firebase (Authentication > Sign-in method)."
+        ? "Active la connexion « Anonyme » dans Firebase."
         : "Connexion impossible. Vérifie internet puis recharge la page.");
     }).finally(() => { signingIn = false; });
     return;
@@ -414,11 +446,8 @@ function render(docs) {
       delBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
       delBtn.onclick = async () => {
         if (confirm("Supprimer ce message ?")) {
-          try {
-            await deleteDoc(doc(db, "messages", d.id));
-          } catch {
-            toast("Impossible de supprimer le message.");
-          }
+          try { await deleteDoc(doc(db, "messages", d.id)); }
+          catch { toast("Impossible de supprimer le message."); }
         }
       };
       bubble.appendChild(delBtn);
@@ -433,7 +462,7 @@ function render(docs) {
 function listen() {
   const q = query(collection(db, "messages"), orderBy("createdAt"), limitToLast(150));
   onSnapshot(q, (snap) => render(snap.docs),
-    () => toast("Impossible de lire les messages (vérifie les règles Firestore)."));
+    () => toast("Impossible de lire les messages."));
 }
 
 $("lightbox").onclick = () => ($("lightbox").hidden = true);
@@ -459,7 +488,6 @@ $("send").addEventListener("submit", async (e) => {
   $("text").focus();
 });
 
-/* Images : réduites puis stockées dans Firestore (gratuit) */
 function shrinkImage(file, maxSide = 900, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -487,17 +515,16 @@ $("file").addEventListener("change", async () => {
   try {
     let data = await shrinkImage(file);
     if (data.length > 900000) data = await shrinkImage(file, 600, 0.55);
-    if (data.length > 900000) return toast("Image trop lourde, choisis-en une plus petite.");
+    if (data.length > 900000) return toast("Image trop lourde.");
     await sendMessage({ image: data });
-  } catch {
-    toast("Impossible d'envoyer cette image.");
-  }
+  } catch { toast("Impossible d'envoyer cette image."); }
 });
 
-/* ---------- Appel vocal WebRTC intégré ---------- */
+/* ---------- APPEL VOCAL AUTOMATIQUE ---------- */
 const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
 let pc = null;
 let localStream = null;
+let isMuted = false;
 
 async function setupAudio() {
   localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -505,103 +532,88 @@ async function setupAudio() {
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
   pc.ontrack = (event) => {
     $("remote-audio").srcObject = event.streams[0];
+    $("call-status-label").textContent = "En communication";
   };
 }
 
-$("call-start-btn").onclick = async () => {
+const callDocRef = doc(db, "calls", "salon-principal");
+
+$("call-btn").onclick = async () => {
   try {
-    await setupAudio();
-    const callDoc = doc(collection(db, "calls"));
-    const offerCandidates = collection(callDoc, "offerCandidates");
-    const answerCandidates = collection(callDoc, "answerCandidates");
+    const snapshot = await getDoc(callDocRef);
+    $("call-screen").hidden = false;
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) addDoc(offerCandidates, event.candidate.toJSON());
-    };
+    if (!snapshot.exists()) {
+      // Démarrer un appel
+      $("call-status-label").textContent = "En attente d'un camarade...";
+      await setupAudio();
+      const offerCandidates = collection(callDocRef, "offerCandidates");
+      const answerCandidates = collection(callDocRef, "answerCandidates");
 
-    const offerDescription = await pc.createOffer();
-    await pc.setLocalDescription(offerDescription);
+      pc.onicecandidate = (e) => { if (e.candidate) addDoc(offerCandidates, e.candidate.toJSON()); };
+      const offerDescription = await pc.createOffer();
+      await pc.setLocalDescription(offerDescription);
 
-    await setDoc(callDoc, { offer: { type: offerDescription.type, sdp: offerDescription.sdp } });
+      await setDoc(callDocRef, { offer: { type: offerDescription.type, sdp: offerDescription.sdp } });
 
-    onSnapshot(callDoc, (snapshot) => {
-      const data = snapshot.data();
-      if (pc && !pc.currentRemoteDescription && data?.answer) {
-        const answerDescription = new RTCSessionDescription(data.answer);
-        pc.setRemoteDescription(answerDescription);
-      }
-    });
-
-    onSnapshot(answerCandidates, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+      onSnapshot(callDocRef, (snap) => {
+        const data = snap.data();
+        if (pc && !pc.currentRemoteDescription && data?.answer) {
+          pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
       });
-    });
 
-    $("call-start-btn").hidden = true;
-    $("call-join-btn").hidden = true;
-    $("call-hangup-btn").hidden = false;
-    sendMessage({ text: "📞 J'ai démarré un appel vocal ! Cliquez sur l'icône verte en haut pour m'entendre." }).catch(() => {});
-    toast("Appel démarré !");
-  } catch (err) {
-    toast("Accès au micro refusé ou erreur d'appel.");
-  }
-};
-
-$("call-join-btn").onclick = async () => {
-  const callId = prompt("Entrez l'ID de l'appel (ou laissez vide pour prendre le dernier) :");
-  let callDoc;
-  if (callId) {
-    callDoc = doc(db, "calls", callId);
-  } else {
-    toast("Démarrage de la connexion...");
-    return;
-  }
-
-  try {
-    await setupAudio();
-    const offerCandidates = collection(callDoc, "offerCandidates");
-    const answerCandidates = collection(callDoc, "answerCandidates");
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) addDoc(answerCandidates, event.candidate.toJSON());
-    };
-
-    const callData = (await getDoc(callDoc)).data();
-    await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-
-    const answerDescription = await pc.createAnswer();
-    await pc.setLocalDescription(answerDescription);
-
-    await updateDoc(callDoc, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
-
-    onSnapshot(offerCandidates, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-        }
+      onSnapshot(answerCandidates, (snap) => {
+        snap.docChanges().forEach((c) => {
+          if (c.type === "added") pc.addIceCandidate(new RTCIceCandidate(c.doc.data()));
+        });
       });
-    });
 
-    $("call-start-btn").hidden = true;
-    $("call-join-btn").hidden = true;
-    $("call-hangup-btn").hidden = false;
-    toast("Appel rejoint !");
+      sendMessage({ text: "📞 J'ai démarré un appel vocal ! Cliquez sur le bouton téléphone en haut pour me rejoindre." }).catch(() => {});
+    } else {
+      // Rejoindre l'appel existant
+      $("call-status-label").textContent = "Connexion à l'appel...";
+      await setupAudio();
+      const offerCandidates = collection(callDocRef, "offerCandidates");
+      const answerCandidates = collection(callDocRef, "answerCandidates");
+
+      pc.onicecandidate = (e) => { if (e.candidate) addDoc(answerCandidates, e.candidate.toJSON()); };
+      const callData = snapshot.data();
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+
+      const answerDescription = await pc.createAnswer();
+      await pc.setLocalDescription(answerDescription);
+
+      await updateDoc(callDocRef, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
+
+      onSnapshot(offerCandidates, (snap) => {
+        snap.docChanges().forEach((c) => {
+          if (c.type === "added") pc.addIceCandidate(new RTCIceCandidate(c.doc.data()));
+        });
+      });
+    }
   } catch {
-    toast("Impossible de rejoindre l'appel.");
+    $("call-screen").hidden = true;
+    toast("Impossible d'accéder au micro ou de rejoindre l'appel.");
   }
 };
 
-$("call-hangup-btn").onclick = () => {
-  if (localStream) localStream.getTracks().forEach((track) => track.stop());
+$("mute-btn").onclick = () => {
+  if (localStream) {
+    isMuted = !isMuted;
+    localStream.getAudioTracks()[0].enabled = !isMuted;
+    $("mute-btn").style.opacity = isMuted ? "0.5" : "1";
+    toast(isMuted ? "Micro coupé" : "Micro activé");
+  }
+};
+
+$("hangup-btn").onclick = async () => {
+  if (localStream) localStream.getTracks().forEach((t) => t.stop());
   if (pc) pc.close();
   pc = null;
   localStream = null;
-  $("call-start-btn").hidden = false;
-  $("call-join-btn").hidden = false;
-  $("call-hangup-btn").hidden = true;
+  $("call-screen").hidden = true;
+  try { await deleteDoc(callDocRef); } catch {}
   toast("Appel terminé.");
 };
 
