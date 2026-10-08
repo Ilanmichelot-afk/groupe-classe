@@ -135,6 +135,11 @@
   .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; font-size: .96rem; }
   .body a { color: #027eb5; }
   .time { float: right; margin: 6px 0 -2px 10px; font-size: .68rem; color: var(--text-soft); line-height: 1; }
+  .del-btn {
+    float: right; margin: 4px 0 -2px 6px; padding: 0; color: var(--text-soft); opacity: .6;
+  }
+  .del-btn:hover { opacity: 1; color: #e5484d; }
+  .del-btn svg { width: 14px; height: 14px; }
   .bubble img { display: block; max-width: 100%; max-height: 340px; border-radius: 6px; margin: 2px 0; cursor: zoom-in; }
   .bubble.has-img { padding: 3px; }
   .bubble.has-img .who { padding: 3px 6px 0; }
@@ -215,14 +220,14 @@ const firebaseConfig = {
 /* 2) RÉGLAGES DE TA CLASSE */
 const SETTINGS = {
   title: "Chat de classe",                    // nom affiché en haut
-  inviteCode: "classe2026",                   // code demandé UNE SEULE FOIS à l'entrée. Mets "" pour le supprimer.
+  inviteCode: "Caca",                   // code demandé UNE SEULE FOIS à l'entrée. Mets "" pour le supprimer.
   callRoom: "chat-de-classe-CHANGE-MOI-123"   // nom de la salle d'appel (long et unique)
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
+import { getFirestore, collection, addDoc, doc, deleteDoc, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = (id) => document.getElementById(id);
@@ -395,6 +400,23 @@ function render(docs) {
     time.className = "time";
     time.textContent = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     bubble.appendChild(time);
+
+    if (mine) {
+      const delBtn = document.createElement("button");
+      delBtn.className = "del-btn";
+      delBtn.title = "Supprimer le message";
+      delBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+      delBtn.onclick = async () => {
+        if (confirm("Supprimer ce message ?")) {
+          try {
+            await deleteDoc(doc(db, "messages", d.id));
+          } catch {
+            toast("Impossible de supprimer le message.");
+          }
+        }
+      };
+      bubble.appendChild(delBtn);
+    }
 
     row.appendChild(bubble);
     box.appendChild(row);
