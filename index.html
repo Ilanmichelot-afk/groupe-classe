@@ -90,7 +90,7 @@
 
   /* ---------- Chat ---------- */
   header {
-    display: flex; align-items: center; gap: 12px; flex: none;
+    display: flex; align-items: center; gap: 8px; flex: none;
     padding: 10px 8px 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
     background: var(--green); color: #fff;
   }
@@ -102,9 +102,10 @@
   .head-text { flex: 1; min-width: 0; }
   .head-text strong { display: block; font-size: 1.05rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .head-text span { display: block; font-size: .8rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .icon-btn { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .icon-btn { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
   .icon-btn:hover { background: #ffffff22; }
-  .icon-btn svg { width: 24px; height: 24px; }
+  .icon-btn svg { width: 22px; height: 22px; }
+  .icon-btn.danger { background: #e5484d; }
 
   #messages {
     flex: 1; overflow-y: auto; padding: 14px 6% 8px; display: flex; flex-direction: column;
@@ -187,7 +188,12 @@
   <header>
     <div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13zm8 0c-.3 0-.6 0-.9.1a4.2 4.2 0 0 1 1.9 3.4V19h6v-2.5c0-2.3-4.700-3.500-7-3.500z"/></svg></div>
     <div class="head-text"><strong id="chat-title">Chat de classe</strong><span id="whoami"></span></div>
-    <button class="icon-btn" id="call-btn" type="button" aria-label="Lancer un appel"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.200-2.200a1 1 0 0 1 1-.25 11.400 11.400 0 0 0 3.600.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.500a1 1 0 0 1 1 1c0 1.300.2 2.500.57 3.600a1 1 0 0 1-.25 1z"/></svg></button>
+    
+    <!-- Boutons d'appel vocal WebRTC -->
+    <button class="icon-btn" id="call-start-btn" type="button" title="Démarrer un appel vocal"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.200-2.200a1 1 0 0 1 1-.25 11.400 11.400 0 0 0 3.600.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.500a1 1 0 0 1 1 1c0 1.300.2 2.500.57 3.600a1 1 0 0 1-.25 1z"/></svg></button>
+    <button class="icon-btn" id="call-join-btn" type="button" title="Rejoindre l'appel" style="color: #25d366;"><svg viewBox="0 0 24 24"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.05 15.05 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg></button>
+    <button class="icon-btn danger" id="call-hangup-btn" type="button" title="Raccrocher" hidden><svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C4.37 7.61 8.01 6 12 6c3.99 0 7.63 1.61 11.71 5.67.39.39.39 1.02 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 1-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
+
     <button class="icon-btn" id="rename-btn" type="button" aria-label="Changer de nom"><svg viewBox="0 0 24 24"><path d="M3 17.250V21h3.750L17.810 9.940l-3.750-3.750zM20.710 7.040a1 1 0 0 0 0-1.410l-2.340-2.340a1 1 0 0 0-1.410 0l-1.830 1.830 3.750 3.750z"/></svg></button>
   </header>
 
@@ -201,6 +207,7 @@
   </form>
 </div>
 
+<audio id="remote-audio" autoplay></audio>
 <div id="toast" hidden role="status"></div>
 <div id="lightbox" hidden><img alt="Image agrandie"></div>
 
@@ -219,15 +226,14 @@ const firebaseConfig = {
 
 /* 2) RÉGLAGES DE TA CLASSE */
 const SETTINGS = {
-  title: "Chat de classe",                    // nom affiché en haut
-  inviteCode: "Caca",                   // code demandé UNE SEULE FOIS à l'entrée. Mets "" pour le supprimer.
-  callRoom: "chat-de-classe-CHANGE-MOI-123"   // nom de la salle d'appel (long et unique)
+  title: "Chat de classe",
+  inviteCode: "Caca"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, deleteDoc, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
+import { getFirestore, collection, addDoc, doc, deleteDoc, setDoc, getDoc, updateDoc, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = (id) => document.getElementById(id);
@@ -488,11 +494,115 @@ $("file").addEventListener("change", async () => {
   }
 });
 
-/* ---------- Appel (Jitsi Meet) ---------- */
-$("call-btn").onclick = () => {
-  const url = "https://meet.jit.si/" + encodeURIComponent(SETTINGS.callRoom);
-  window.open(url, "_blank", "noopener");
-  sendMessage({ text: "📞 J'ai lancé un appel : " + url }).catch(() => {});
+/* ---------- Appel vocal WebRTC intégré ---------- */
+const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
+let pc = null;
+let localStream = null;
+
+async function setupAudio() {
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  pc = new RTCPeerConnection(servers);
+  localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+  pc.ontrack = (event) => {
+    $("remote-audio").srcObject = event.streams[0];
+  };
+}
+
+$("call-start-btn").onclick = async () => {
+  try {
+    await setupAudio();
+    const callDoc = doc(collection(db, "calls"));
+    const offerCandidates = collection(callDoc, "offerCandidates");
+    const answerCandidates = collection(callDoc, "answerCandidates");
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) addDoc(offerCandidates, event.candidate.toJSON());
+    };
+
+    const offerDescription = await pc.createOffer();
+    await pc.setLocalDescription(offerDescription);
+
+    await setDoc(callDoc, { offer: { type: offerDescription.type, sdp: offerDescription.sdp } });
+
+    onSnapshot(callDoc, (snapshot) => {
+      const data = snapshot.data();
+      if (pc && !pc.currentRemoteDescription && data?.answer) {
+        const answerDescription = new RTCSessionDescription(data.answer);
+        pc.setRemoteDescription(answerDescription);
+      }
+    });
+
+    onSnapshot(answerCandidates, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        }
+      });
+    });
+
+    $("call-start-btn").hidden = true;
+    $("call-join-btn").hidden = true;
+    $("call-hangup-btn").hidden = false;
+    sendMessage({ text: "📞 J'ai démarré un appel vocal ! Cliquez sur l'icône verte en haut pour m'entendre." }).catch(() => {});
+    toast("Appel démarré !");
+  } catch (err) {
+    toast("Accès au micro refusé ou erreur d'appel.");
+  }
+};
+
+$("call-join-btn").onclick = async () => {
+  const callId = prompt("Entrez l'ID de l'appel (ou laissez vide pour prendre le dernier) :");
+  let callDoc;
+  if (callId) {
+    callDoc = doc(db, "calls", callId);
+  } else {
+    toast("Démarrage de la connexion...");
+    return;
+  }
+
+  try {
+    await setupAudio();
+    const offerCandidates = collection(callDoc, "offerCandidates");
+    const answerCandidates = collection(callDoc, "answerCandidates");
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) addDoc(answerCandidates, event.candidate.toJSON());
+    };
+
+    const callData = (await getDoc(callDoc)).data();
+    await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+
+    const answerDescription = await pc.createAnswer();
+    await pc.setLocalDescription(answerDescription);
+
+    await updateDoc(callDoc, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
+
+    onSnapshot(offerCandidates, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        }
+      });
+    });
+
+    $("call-start-btn").hidden = true;
+    $("call-join-btn").hidden = true;
+    $("call-hangup-btn").hidden = false;
+    toast("Appel rejoint !");
+  } catch {
+    toast("Impossible de rejoindre l'appel.");
+  }
+};
+
+$("call-hangup-btn").onclick = () => {
+  if (localStream) localStream.getTracks().forEach((track) => track.stop());
+  if (pc) pc.close();
+  pc = null;
+  localStream = null;
+  $("call-start-btn").hidden = false;
+  $("call-join-btn").hidden = false;
+  $("call-hangup-btn").hidden = true;
+  toast("Appel terminé.");
 };
 
 refresh();
