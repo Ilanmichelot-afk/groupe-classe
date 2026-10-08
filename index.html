@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#008069">
+<title>Chat de classe</title>
+<style>
+  :root {
+    --green: #008069;
+    --green-dark: #005c4b;
+    --send: #00a884;
+    --bg: #d1d7db;
+    --chat-bg: #efeae2;
+    --dots: rgba(0,0,0,.045);
+    --bubble-in: #ffffff;
+    --bubble-out: #d9fdd3;
+    --text: #111b21;
+    --text-soft: #667781;
+    --bar: #f0f2f5;
+    --input: #ffffff;
+    --chip: #ffffffcc;
+    --shadow: 0 1px 1px rgba(11,20,26,.13);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --green: #202c33;
+      --green-dark: #202c33;
+      --send: #00a884;
+      --bg: #0b141a;
+      --chat-bg: #0b141a;
+      --dots: rgba(255,255,255,.035);
+      --bubble-in: #202c33;
+      --bubble-out: #005c4b;
+      --text: #e9edef;
+      --text-soft: #8696a0;
+      --bar: #202c33;
+      --input: #2a3942;
+      --chip: #182229cc;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  :focus-visible { outline: 2px solid var(--send); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  svg { display: block; fill: currentColor; }
+
+  /* Cadre général : plein écran sur téléphone, fenêtre centrée sur PC */
+  .app {
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    background: var(--chat-bg);
+    position: relative; overflow: hidden;
+  }
+  @media (min-width: 800px) {
+    body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 128px; background: var(--green-dark); z-index: 0; }
+    @media (prefers-color-scheme: dark) { body::before { display: none; } }
+    .app { position: relative; z-index: 1; max-width: 920px; height: calc(100dvh - 40px); margin: 20px auto; border-radius: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+  }
+
+  /* ---------- Écran du nom ---------- */
+  #join { align-items: center; justify-content: center; padding: 24px; background: var(--bar); }
+  .join-card { width: 100%; max-width: 380px; text-align: center; }
+  .logo {
+    width: 84px; height: 84px; border-radius: 50%; background: var(--send); color: #fff;
+    margin: 0 auto 18px; display: grid; place-items: center;
+  }
+  .logo svg { width: 44px; height: 44px; }
+  .join-card h1 { margin: 0 0 6px; font-size: 1.6rem; font-weight: 600; }
+  .join-card p { margin: 0 0 22px; color: var(--text-soft); }
+  .field {
+    width: 100%; padding: 13px 16px; margin-bottom: 12px; border-radius: 10px;
+    border: 1px solid transparent; background: var(--input); font-size: 1rem;
+  }
+  .field:focus { outline: none; border-color: var(--send); }
+  .go-btn {
+    width: 100%; padding: 13px; border-radius: 999px; background: var(--send); color: #fff;
+    font-weight: 600; font-size: 1rem; margin-top: 4px;
+  }
+  .go-btn:disabled { opacity: .6; }
+  .err { color: #e5484d; min-height: 1.3em; margin: 10px 0 0; font-size: .92rem; }
+
+  /* ---------- Chat ---------- */
+  header {
+    display: flex; align-items: center; gap: 12px; flex: none;
+    padding: 10px 8px 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+    background: var(--green); color: #fff;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; background: #ffffff33; flex: none;
+    display: grid; place-items: center;
+  }
+  .avatar svg { width: 24px; height: 24px; }
+  .head-text { flex: 1; min-width: 0; }
+  .head-text strong { display: block; font-size: 1.05rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .head-text span { display: block; font-size: .8rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .icon-btn:hover { background: #ffffff22; }
+  .icon-btn svg { width: 24px; height: 24px; }
+
+  #messages {
+    flex: 1; overflow-y: auto; padding: 14px 6% 8px; display: flex; flex-direction: column;
+    background-color: var(--chat-bg);
+    background-image: radial-gradient(var(--dots) 2px, transparent 2px);
+    background-size: 26px 26px;
+    overscroll-behavior: contain;
+  }
+  @media (max-width: 600px) { #messages { padding: 12px 10px 6px; } }
+
+  .day { align-self: center; margin: 10px 0; padding: 5px 12px; border-radius: 8px; background: var(--chip); color: var(--text-soft); font-size: .78rem; box-shadow: var(--shadow); }
+  .row { display: flex; margin-top: 2px; }
+  .row.first { margin-top: 8px; }
+  .row.me { justify-content: flex-end; }
+  .bubble {
+    position: relative; max-width: min(78%, 520px); padding: 6px 8px 5px 9px;
+    background: var(--bubble-in); border-radius: 8px; box-shadow: var(--shadow);
+  }
+  .row.me .bubble { background: var(--bubble-out); }
+  .row.first:not(.me) .bubble { border-top-left-radius: 0; }
+  .row.first.me .bubble { border-top-right-radius: 0; }
+  .row.first:not(.me) .bubble::before, .row.first.me .bubble::before {
+    content: ""; position: absolute; top: 0; width: 8px; height: 12px; background: inherit;
+  }
+  .row.first:not(.me) .bubble::before { left: -7px; clip-path: polygon(100% 0, 0 0, 100% 100%); }
+  .row.first.me .bubble::before { right: -7px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .who { font-size: .82rem; font-weight: 600; margin-bottom: 1px; }
+  .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; font-size: .96rem; }
+  .body a { color: #027eb5; }
+  .time { float: right; margin: 6px 0 -2px 10px; font-size: .68rem; color: var(--text-soft); line-height: 1; }
+  .bubble img { display: block; max-width: 100%; max-height: 340px; border-radius: 6px; margin: 2px 0; cursor: zoom-in; }
+  .bubble.has-img { padding: 3px; }
+  .bubble.has-img .who { padding: 3px 6px 0; }
+  .bubble.has-img .body { padding: 0 6px; }
+  .bubble.has-img .time { margin-right: 4px; }
+  .empty { margin: auto; padding: 8px 14px; background: var(--chip); border-radius: 8px; color: var(--text-soft); text-align: center; font-size: .9rem; }
+
+  /* ---------- Barre d'écriture ---------- */
+  form#send {
+    flex: none; display: flex; align-items: center; gap: 6px;
+    padding: 8px 8px; padding-bottom: max(8px, env(safe-area-inset-bottom));
+    background: var(--bar);
+  }
+  form#send .icon-btn { color: var(--text-soft); }
+  form#send .icon-btn:hover { background: #00000012; }
+  #text { flex: 1; min-width: 0; border-radius: 22px; padding: 11px 16px; border: 0; background: var(--input); font-size: 1rem; }
+  #text:focus { outline: none; }
+  .send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--send); color: #fff; display: grid; place-items: center; flex: none; }
+  .send-btn svg { width: 22px; height: 22px; }
+
+  #toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #111b21; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 20; max-width: 90%; text-align: center; }
+  #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: grid; place-items: center; padding: 16px; z-index: 30; }
+  #lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ================= ÉCRAN DU NOM ================= -->
+<main class="app" id="join" hidden>
+  <div class="join-card">
+    <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg></div>
+    <h1 id="join-title">Chat de classe</h1>
+    <p>Choisis le nom que les autres verront.</p>
+    <form id="join-form" novalidate>
+      <input class="field" id="name" type="text" maxlength="20" placeholder="Ton nom" autocomplete="nickname" aria-label="Ton nom">
+      <input class="field" id="code" type="text" placeholder="Code de la classe" autocomplete="off" aria-label="Code de la classe" hidden>
+      <button class="go-btn" id="join-btn" type="submit">Entrer dans le chat</button>
+      <p class="err" id="join-err" role="alert"></p>
+    </form>
+  </div>
+</main>
+
+<!-- ================= CHAT ================= -->
+<div class="app" id="chat" hidden>
+  <header>
+    <div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zM8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13zm8 0c-.3 0-.6 0-.9.1a4.2 4.2 0 0 1 1.9 3.4V19h6v-2.5c0-2.3-4.700-3.500-7-3.500z"/></svg></div>
+    <div class="head-text"><strong id="chat-title">Chat de classe</strong><span id="whoami"></span></div>
+    <button class="icon-btn" id="call-btn" type="button" aria-label="Lancer un appel"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.200-2.200a1 1 0 0 1 1-.25 11.400 11.400 0 0 0 3.600.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.500a1 1 0 0 1 1 1c0 1.300.2 2.500.57 3.600a1 1 0 0 1-.25 1z"/></svg></button>
+    <button class="icon-btn" id="rename-btn" type="button" aria-label="Changer de nom"><svg viewBox="0 0 24 24"><path d="M3 17.250V21h3.750L17.810 9.940l-3.750-3.750zM20.710 7.040a1 1 0 0 0 0-1.410l-2.340-2.340a1 1 0 0 0-1.410 0l-1.830 1.830 3.750 3.750z"/></svg></button>
+  </header>
+
+  <div id="messages" aria-live="polite"></div>
+
+  <form id="send" autocomplete="off">
+    <input type="file" id="file" accept="image/*" hidden>
+    <button class="icon-btn" id="img-btn" type="button" aria-label="Envoyer une image"><svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.500 13.500l2.500 3 3.500-4.500 4.500 6H5z"/></svg></button>
+    <input type="text" id="text" placeholder="Écris un message" maxlength="1000" aria-label="Message">
+    <button class="send-btn" type="submit" aria-label="Envoyer"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>
+  </form>
+</div>
+
+<div id="toast" hidden role="status"></div>
+<div id="lightbox" hidden><img alt="Image agrandie"></div>
+
+<script type="module">
+/* =====================================================================
+   1) CONFIG FIREBASE
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBVeqWUmq21VKivGo1KXUxFIVef_2f7Lho",
+  authDomain: "groupe-class.firebaseapp.com",
+  projectId: "groupe-class",
+  storageBucket: "groupe-class.firebasestorage.app",
+  messagingSenderId: "261148032265",
+  appId: "1:261148032265:web:822707b43a8a16e0da27d8"
+};
+
+/* 2) RÉGLAGES DE TA CLASSE */
+const SETTINGS = {
+  title: "Chat de classe",                    // nom affiché en haut
+  inviteCode: "classe2026",                   // code demandé UNE SEULE FOIS à l'entrée. Mets "" pour le supprimer.
+  callRoom: "chat-de-classe-CHANGE-MOI-123"   // nom de la salle d'appel (long et unique)
+};
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $ = (id) => document.getElementById(id);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+document.title = SETTINGS.title;
+$("join-title").textContent = SETTINGS.title;
+$("chat-title").textContent = SETTINGS.title;
+if (SETTINGS.inviteCode) $("code").hidden = false;
+
+/* ---------- Mémoire du navigateur (nom + code validé) ---------- */
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+};
+let myName = store.get("chat_name");
+let currentUser = null;
+let listening = false;
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.id);
+  toast.id = setTimeout(() => (t.hidden = true), 3500);
+}
+
+/* ---------- Écran du nom ---------- */
+function showJoin(message = "") {
+  $("chat").hidden = true;
+  $("join").hidden = false;
+  $("join-err").textContent = message;
+  $("name").value = myName || "";
+  if (!$("join-err").textContent) setTimeout(() => $("name").focus(), 50);
+}
+
+$("join-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = $("name").value.trim();
+  if (!name) { $("join-err").textContent = "Écris ton nom."; return; }
+  const codeOk = !SETTINGS.inviteCode || store.get("chat_code_ok") === "1";
+  if (!codeOk) {
+    if ($("code").value.trim() !== SETTINGS.inviteCode) { $("join-err").textContent = "Code de la classe incorrect."; return; }
+    store.set("chat_code_ok", "1");
+  }
+  myName = name;
+  store.set("chat_name", name);
+  $("join-err").textContent = "";
+  refresh();
+});
+
+$("rename-btn").onclick = () => {
+  const n = (prompt("Nouveau nom :", myName) || "").trim().slice(0, 20);
+  if (n) { myName = n; store.set("chat_name", n); $("whoami").textContent = "Toi : " + n; }
+};
+
+/* ---------- Connexion invisible (aucun compte à créer) ---------- */
+onAuthStateChanged(auth, (user) => { currentUser = user; refresh(); });
+
+let signingIn = false;
+function refresh() {
+  const codeOk = !SETTINGS.inviteCode || store.get("chat_code_ok") === "1";
+  if (!myName || !codeOk) { showJoin(); return; }
+  if (!currentUser) {
+    if (signingIn) return;
+    signingIn = true;
+    signInAnonymously(auth).catch((err) => {
+      showJoin(err.code === "auth/operation-not-allowed"
+        ? "Active la connexion « Anonyme » dans Firebase (Authentication > Sign-in method)."
+        : "Connexion impossible. Vérifie internet puis recharge la page.");
+    }).finally(() => { signingIn = false; });
+    return;
+  }
+  showChat();
+}
+
+function showChat() {
+  $("join").hidden = true;
+  $("chat").hidden = false;
+  $("whoami").textContent = "Toi : " + myName;
+  if (!listening) { listening = true; listen(); }
+}
+
+/* ---------- Affichage des messages ---------- */
+const COLORS = ["#d4553f", "#c2185b", "#7b4fc4", "#2f6bd0", "#0b8a8a", "#2e8b57", "#b8860b", "#e0702f"];
+function colorFor(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return COLORS[Math.abs(h) % COLORS.length];
+}
+function dayLabel(date) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(date); d.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - d) / 86400000);
+  if (diff === 0) return "Aujourd'hui";
+  if (diff === 1) return "Hier";
+  return date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
+
+let firstRender = true;
+function render(docs) {
+  const box = $("messages");
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 140;
+  box.textContent = "";
+
+  if (docs.length === 0) {
+    const p = document.createElement("div");
+    p.className = "empty";
+    p.textContent = "Aucun message pour l'instant. Écris le premier !";
+    box.appendChild(p);
+    return;
+  }
+
+  let lastDay = "", lastUid = "";
+  for (const d of docs) {
+    const m = d.data({ serverTimestamps: "estimate" });
+    const date = m.createdAt ? m.createdAt.toDate() : new Date();
+    const dayKey = date.toDateString();
+
+    if (dayKey !== lastDay) {
+      const sep = document.createElement("div");
+      sep.className = "day";
+      sep.textContent = dayLabel(date);
+      box.appendChild(sep);
+      lastDay = dayKey; lastUid = "";
+    }
+
+    const mine = m.uid === currentUser?.uid;
+    const first = m.uid !== lastUid;
+    lastUid = m.uid;
+
+    const row = document.createElement("div");
+    row.className = "row" + (mine ? " me" : "") + (first ? " first" : "");
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    if (!mine && first) {
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = m.name || "Anonyme";
+      who.style.color = colorFor(m.name || "Anonyme");
+      bubble.appendChild(who);
+    }
+
+    if (m.image && typeof m.image === "string" && m.image.startsWith("data:image/")) {
+      bubble.classList.add("has-img");
+      const img = document.createElement("img");
+      img.src = m.image;
+      img.alt = "Image envoyée par " + (m.name || "un camarade");
+      img.onclick = () => { $("lightbox").querySelector("img").src = m.image; $("lightbox").hidden = false; };
+      bubble.appendChild(img);
+    }
+
+    if (m.text) {
+      const body = document.createElement("span");
+      body.className = "body";
+      const parts = String(m.text).split(/(https?:\/\/[^\s]+)/g);
+      for (const part of parts) {
+        if (/^https?:\/\//.test(part)) {
+          const a = document.createElement("a");
+          a.href = part; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = part;
+          body.appendChild(a);
+        } else body.appendChild(document.createTextNode(part));
+      }
+      bubble.appendChild(body);
+    }
+
+    const time = document.createElement("span");
+    time.className = "time";
+    time.textContent = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    bubble.appendChild(time);
+
+    row.appendChild(bubble);
+    box.appendChild(row);
+  }
+  if (nearBottom || firstRender) { box.scrollTop = box.scrollHeight; firstRender = false; }
+}
+
+function listen() {
+  const q = query(collection(db, "messages"), orderBy("createdAt"), limitToLast(150));
+  onSnapshot(q, (snap) => render(snap.docs),
+    () => toast("Impossible de lire les messages (vérifie les règles Firestore)."));
+}
+
+$("lightbox").onclick = () => ($("lightbox").hidden = true);
+
+/* ---------- Envoi ---------- */
+async function sendMessage({ text = "", image = "" }) {
+  if (!currentUser) return;
+  await addDoc(collection(db, "messages"), {
+    text, image,
+    uid: currentUser.uid,
+    name: myName || "Anonyme",
+    createdAt: serverTimestamp()
+  });
+}
+
+$("send").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("text").value.trim();
+  if (!text) return;
+  $("text").value = "";
+  try { await sendMessage({ text }); }
+  catch { toast("Message non envoyé. Réessaie."); $("text").value = text; }
+  $("text").focus();
+});
+
+/* Images : réduites puis stockées dans Firestore (gratuit) */
+function shrinkImage(file, maxSide = 900, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * ratio);
+      c.height = Math.round(img.height * ratio);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+    img.src = url;
+  });
+}
+
+$("img-btn").onclick = () => $("file").click();
+$("file").addEventListener("change", async () => {
+  const file = $("file").files[0];
+  $("file").value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return toast("Choisis un fichier image.");
+  try {
+    let data = await shrinkImage(file);
+    if (data.length > 900000) data = await shrinkImage(file, 600, 0.55);
+    if (data.length > 900000) return toast("Image trop lourde, choisis-en une plus petite.");
+    await sendMessage({ image: data });
+  } catch {
+    toast("Impossible d'envoyer cette image.");
+  }
+});
+
+/* ---------- Appel (Jitsi Meet) ---------- */
+$("call-btn").onclick = () => {
+  const url = "https://meet.jit.si/" + encodeURIComponent(SETTINGS.callRoom);
+  window.open(url, "_blank", "noopener");
+  sendMessage({ text: "📞 J'ai lancé un appel : " + url }).catch(() => {});
+};
+
+refresh();
+</script>
+</body>
+</html>
